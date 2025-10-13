@@ -1,5 +1,8 @@
 ChangeLog
 
+2.1
+- bluray_backup: fix piping not working
+
 2.0
 - Move build system to cmake
 - Add bluray_backup - back up a disc

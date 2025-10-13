@@ -486,16 +486,14 @@ int main(int argc, char **argv) {
 	struct bd_file_s *bd_file = NULL;
 
 	// Index: 0 - amount to read; 1 - amount successfully read; 2 - total bytes successfully read
-	int64_t bluray_read[3];
+	int64_t bluray_read[2];
 	bluray_read[0] = BLURAY_M2TS_UNIT_SIZE;
 	bluray_read[1] = 0;
-	bluray_read[2] = 0;
 
-	// Index: 0 - amount to write; 1 - amount successfully written; 2 - total bytes successfully written
-	int64_t bluray_write[3];
+	// Index: 0 - amount to write; 1 - amount successfully written
+	int64_t bluray_write[2];
 	bluray_write[0] = 0;
 	bluray_write[1] = 0;
-	bluray_write[2] = 0;
 
 	char target_filename[PATH_MAX];
 	memset(target_filename, '\0', PATH_MAX);
@@ -548,10 +546,7 @@ int main(int argc, char **argv) {
 			if(bluray_read[1] == 0)
 				break;
 
-			bluray_read[2] += bluray_read[1];
-
 			bluray_write[1] = write(bluray_fd, &bluray_buffer, bluray_read[1]);
-			bluray_write[2] += bluray_write[1];
 
 		} while(bluray_read[1] > 0);
 

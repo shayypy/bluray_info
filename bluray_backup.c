@@ -508,6 +508,7 @@ int main(int argc, char **argv) {
 		}
 
 		printf("* [%i/%i] %s\n", ix + 1, bluray_files, bluray_filenames[ix]);
+		fflush(stdout);
 
 		bd_file = bd_open_file_dec(bd, bluray_filenames[ix]);
 

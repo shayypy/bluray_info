@@ -41,7 +41,6 @@
  *
  */
 
-bool debug;
 int fd_dnames;
 int fd_fnames;
 int bluray_dirs;
@@ -85,9 +84,6 @@ int mk_backup_dir(char *backup_dir, char *bluray_dir) {
 	memset(backup_mkdir_path, '\0', PATH_MAX);
 
 	snprintf(backup_mkdir_path, PATH_MAX - 1, "%s/%s", backup_dir, bluray_dir);
-
-	if(debug)
-		fprintf(stderr, "Creating Blu-ray backup directory: '%s'\n", backup_mkdir_path);
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__) || defined(__MSYS__)
 	retval = mkdir(backup_mkdir_path);
@@ -145,11 +141,8 @@ int log_filenames(BLURAY *bd, char *parent_dir, char *target_dir) {
 
 		bdnd_read = bdnd_dir->read(bdnd_dir, bdnd_dirent);
 
-		if(bdnd_read == -1) {
-			if(debug)
-				fprintf(stderr, "bdnd_dir->read() moving to next result\n");
+		if(bdnd_read == -1)
 			continue;
-		}
 
 		if (strchr(bdnd_dirent->d_name, '.') == NULL) {
 
@@ -158,9 +151,6 @@ int log_filenames(BLURAY *bd, char *parent_dir, char *target_dir) {
 
 			memset(dirname, '\0', PATH_MAX);
 			snprintf(dirname, PATH_MAX, "%s/%s", parent_dir, bdnd_dirent->d_name);
-
-			if(debug)
-				printf("%s\n", dirname);
 
 			memset(tmp_dirname, '\0', PATH_MAX);
 			snprintf(tmp_dirname, PATH_MAX - 1, "%s\n", dirname);
@@ -175,11 +165,6 @@ int log_filenames(BLURAY *bd, char *parent_dir, char *target_dir) {
 
 			memset(tmp_filename, '\0', PATH_MAX);
 			snprintf(tmp_filename, PATH_MAX - 1, "%s/%s\n", parent_dir, bdnd_dirent->d_name);
-
-			// FIXME I don't like this, not having the newline, it's going to cause confusion
-			// at some point.
-			if(debug)
-				printf("%s", tmp_filename);
 
 			add_filename_to_tmpfile(tmp_filename, fd_fnames);
 
@@ -196,8 +181,6 @@ int log_filenames(BLURAY *bd, char *parent_dir, char *target_dir) {
 }
 
 int main(int argc, char **argv) {
-
-	debug = false;
 
 	char device_filename[PATH_MAX] = {'\0'};
 	memset(device_filename, '\0', PATH_MAX);
@@ -221,10 +204,9 @@ int main(int argc, char **argv) {
 		{ "keydb", required_argument, NULL, 'k' },
 		{ "skip-m2ts", no_argument, NULL, 's' },
 		{ "version", no_argument, NULL, 'V' },
-		{ "debug", no_argument, NULL, 'z' },
 		{ 0, 0, 0, 0 }
 	};
-	while((g_opt = getopt_long(argc, argv, "hd:k:szV", p_long_opts, &g_ix)) != -1) {
+	while((g_opt = getopt_long(argc, argv, "hd:k:sV", p_long_opts, &g_ix)) != -1) {
 
 		switch(g_opt) {
 
@@ -243,10 +225,6 @@ int main(int argc, char **argv) {
 			case 'V':
 				printf("bluray_backup " PACKAGE_VERSION "\n");
 				exit_help = true;
-				break;
-
-			case 'z':
-				debug = true;
 				break;
 
 			case 'h':
@@ -313,8 +291,6 @@ int main(int argc, char **argv) {
 
 	snprintf(dnames_filename, PATH_MAX, "/tmp/bd_dnames_%i", random_number);
 	snprintf(fnames_filename, PATH_MAX, "/tmp/bd_fnames_%i", random_number);
-	if(debug)
-		fprintf(stderr, "temporary filenames: %s %s\n", dnames_filename, fnames_filename);
 
 	// It's read + write here because I'm going to open it with fdopen() later
 	fd_dnames = open(dnames_filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
@@ -382,28 +358,16 @@ int main(int argc, char **argv) {
 		if(strstr(parent_dirent->d_name, "AACS") || strstr(parent_dirent->d_name, "CERTIFICATE"))
 			continue;
 
-		if(parent_read == -1) {
-			// Failing on top directory /BDMV is expected, don't throw a warning
-			if(debug && (strncmp(parent_dirent->d_name, "BDMV", 4) != 0))
-				fprintf(stderr, "parent_dir->read() on '%s' failed\n", parent_dirent->d_name);
+		// Failing on top directory /BDMV is expected, don't throw a warning
+		if(parent_read == -1)
 			break;
-		}
 
-		if(parent_read == 1) {
-			if(debug)
-				fprintf(stderr, "parent_dir->read() '%s' reached EOF\n", parent_dirent->d_name);
+		if(parent_read == 1)
 			continue;
-		}
 
 		// We might be backing up a directory instead of a device, so skip that
-		if(parent_dirent->d_name[0] == '.') {
-			if(debug)
-				fprintf(stderr, "Skipping . and .. from filesystem directory\n");
+		if(parent_dirent->d_name[0] == '.')
 			continue;
-		}
-
-		if(debug)
-			printf("%s\n", parent_dirent->d_name);
 
 		// Check if it's a directory or a file
 		if (strchr(parent_dirent->d_name, '.') == NULL)
@@ -442,10 +406,6 @@ int main(int argc, char **argv) {
 
 	}
 
-	if(debug) {
-		fprintf(stderr, "total dirs: %i total files: %i\n", bluray_dirs, bluray_files);
-	}
-
 	// fdopen should be seeking to the beginning, but it's not for me for some reason. Even if
 	// I was using fdopen for read only, it still needs to seek to beginning
 	off_t retval_seek = 0;
@@ -475,9 +435,6 @@ int main(int argc, char **argv) {
 		memset(bluray_dirnames[ix], '\0', PATH_MAX);
 		// Trimming the newline from fgets() when copying
 		strncpy(bluray_dirnames[ix], line, strlen(line) - 1);
-
-		if(debug)
-			printf("[%i/%i] %s\n", ix + 1, bluray_dirs, bluray_dirnames[ix]);
 
 		ix++;
 
@@ -517,19 +474,11 @@ int main(int argc, char **argv) {
 		// Trimming the newline from fgets() when copying
 		strncpy(bluray_filenames[ix], line, strlen(line) - 1);
 
-		if(debug)
-			printf("[%i/%i] %s\n", ix + 1, bluray_files, bluray_filenames[ix]);
-
 		ix++;
 
 	}
 
 	qsort(bluray_filenames, (size_t)bluray_files, sizeof(*bluray_filenames), sort_arr_filenames);
-
-	for(ix = 0; ix < bluray_files; ix++) {
-		if(debug)
-			printf("ix: %i filename: %s\n", ix, bluray_filenames[ix]);
-	}
 
 	/** THIS WORKS TOO, YAY! It copies all the files fine! :D **/
 	uint8_t bluray_buffer[BLURAY_M2TS_UNIT_SIZE];
@@ -559,9 +508,6 @@ int main(int argc, char **argv) {
 			printf("* [%i/%i] %s (skipping)\n", ix + 1, bluray_files, bluray_filenames[ix]);
 			continue;
 		}
-
-		if(debug)
-			printf("bluray_filenames[%i]: %s\n", ix, bluray_filenames[ix]);
 
 		printf("* [%i/%i] %s\n", ix + 1, bluray_files, bluray_filenames[ix]);
 
@@ -599,15 +545,10 @@ int main(int argc, char **argv) {
 			}
 
 			// Reached end of file
-			if(bluray_read[1] == 0) {
-				if(debug)
-					fprintf(stderr, "parent_dir->read() '%s' reached EOF\n", parent_dirent->d_name);
+			if(bluray_read[1] == 0)
 				break;
-			}
 
 			bluray_read[2] += bluray_read[1];
-			if(debug)
-				fprintf(stderr, "bluray_read[2]: %" PRIi64 "\n", bluray_read[2]);
 
 			bluray_write[1] = write(bluray_fd, &bluray_buffer, bluray_read[1]);
 			bluray_write[2] += bluray_write[1];
